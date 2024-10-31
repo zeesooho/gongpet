@@ -1,0 +1,276 @@
+// db연결 세팅
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// 스키마
+model User {
+  id             Int            @id @default(autoincrement())
+  email          String         @unique @db.VarChar(50)
+  ageRange       String?        @db.VarChar(10)
+  birthday       String?        @db.VarChar(6)
+  birthdayType   String?        @db.VarChar(6)
+  gender         String?        @db.VarChar(6)
+  registrationAt DateTime       @default(now())
+  role           Role
+  from           From
+  isDeleted      Boolean        @default(false)
+  
+  userProfile    UserProfile?
+  pets           Pet[]          // Added pets relation
+  posts          Post[]
+  postLikes      PostLike[]
+  postKeeps      PostKeep[]
+  comments       Comment[]
+  commentLikes   CommentLike[]
+  dpttResults    DpttResult[]
+  refreshTokens  RefreshToken[]
+
+  @@index([email])
+  @@index([ageRange, gender])
+  @@index([isDeleted])
+}
+
+model RefreshToken {
+  id         String   @id @default(uuid())
+  token      String   @unique @db.VarChar(255)  // Changed from Text to VarChar(255)
+  userId     Int
+  deviceInfo String?  // 디바이스 정보 저장 (예: "웹 브라우저", "iOS 앱", "Android 앱")
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+}
+
+model UserProfile {
+  userId   Int     @id
+  nickname String  @db.VarChar(20)
+  imageUrl String? @db.Text
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([nickname])
+}
+
+model Pet {
+  id          Int          @id @default(autoincrement())
+  userId      Int
+  name        String       @db.VarChar(12)
+  age         Int          @db.UnsignedTinyInt
+  birth       DateTime?    @db.DateTime
+  breed       String?      @db.VarChar(30)
+  isDeleted   Boolean      @default(false)
+  
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dpttResults DpttResult[]
+
+  @@index([userId])
+  @@index([name])
+  @@index([isDeleted])
+}
+
+model Post {
+  id         Int      @id @default(autoincrement())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  userId     Int?
+  categoryId Int?
+  labelId    Int?
+  title      String   @db.VarChar(255)
+  content    String   @db.Text
+  isDeleted  Boolean  @default(false)
+
+  user             User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  category         Category?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  label            Label?           @relation(fields: [labelId], references: [id], onDelete: SetNull)
+  postMeta         PostMeta?
+  popularityPosts  PopularityPost[]
+  postLikes        PostLike[]
+  postKeeps        PostKeep[]
+  comments         Comment[]
+
+  @@index([userId])
+  @@index([categoryId])
+  @@index([labelId])
+  @@index([createdAt])
+  @@index([isDeleted])
+}
+
+model PostMeta {
+  postId        Int @id
+  views         Int @default(0) @db.UnsignedInt
+  likes         Int @default(0) @db.UnsignedInt
+  commentsCount Int @default(0) @db.UnsignedInt
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([views])
+  @@index([likes])
+  @@index([commentsCount])
+}
+
+model PopularityPost {
+  id         Int   @id @default(autoincrement())
+  postId     Int
+  categoryId Int
+  score      Float
+
+  post     Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([categoryId])
+}
+
+model PostLike {
+  id        Int      @id @default(autoincrement())
+  postId    Int
+  userId    Int
+  createdAt DateTime @default(now())
+  isActive  Boolean  @default(true)
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([isActive])
+}
+
+model PostKeep {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  postId    Int
+  createdAt DateTime @default(now())
+  isActive  Boolean  @default(true)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([postId])
+  @@index([createdAt])
+  @@index([isActive])
+}
+
+model Comment {
+  id              Int       @id @default(autoincrement())
+  postId          Int
+  parentCommentId Int?
+  userId          Int?
+  content         String    @db.VarChar(500)
+  likes           Int       @default(0) @db.UnsignedInt
+  createdAt       DateTime  @default(now())
+  isDeleted       Boolean   @default(false)
+
+  post           Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  parentComment  Comment?      @relation("CommentToComment", fields: [parentCommentId], references: [id], onDelete: SetNull)
+  childComments  Comment[]     @relation("CommentToComment")
+  user           User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  commentLikes   CommentLike[]
+
+  @@index([postId])
+  @@index([parentCommentId])
+  @@index([userId])
+  @@index([likes])
+  @@index([isDeleted])
+}
+
+model CommentLike {
+  id        Int      @id @default(autoincrement())
+  commentId Int
+  userId    Int
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([commentId])
+  @@index([userId])
+  @@index([isActive])
+}
+
+model Category {
+  id           Int     @id @default(autoincrement())
+  name         String  @db.VarChar(50)
+  abbreviation String  @db.VarChar(20)
+  description  String? @db.VarChar(50)
+  hasLabel     Boolean @default(false)
+
+  posts           Post[]
+  labels          Label[]
+  popularityPosts PopularityPost[]
+
+  @@index([name])
+  @@index([abbreviation])
+}
+
+model Label {
+  id               Int    @id @default(autoincrement())
+  name             String @db.VarChar(20)
+  parentCategoryId Int
+
+  category Category @relation(fields: [parentCategoryId], references: [id], onDelete: Cascade)
+  posts    Post[]
+
+  @@index([name])
+  @@index([parentCategoryId])
+}
+
+model DpttResult {
+  id                       Int      @id @default(autoincrement())
+  userId                   Int
+  petId                    Int?
+  type                     DpttType
+  introversionExtroversion Int
+  dependenceLeadership     Int
+  rationalityEmotionality  Int
+  createdAt               DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pet  Pet? @relation(fields: [petId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([petId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+enum DpttType {
+  IDR
+  IDE
+  ILR
+  ILE
+  EDR
+  EDE
+  ELR
+  ELE
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+enum From {
+  ORIGIN
+  KAKAO
+}
+
+// erd 생성
+generator erd {
+  provider = "prisma-erd-generator"
+}
