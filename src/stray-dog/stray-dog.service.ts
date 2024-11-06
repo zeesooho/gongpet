@@ -12,7 +12,7 @@ export class StrayDogService {
     this.baseUrl = process.env.STRAY_DOG_API_URL;
     this.serviceKey = process.env.STRAY_DOG_SERVICE_KEY;
   }
-  
+
   async getSido(): Promise<SidoItem[]> {
     const response = await lastValueFrom(
       this.httpService.get<ApiResponse<SidoItem>>(`${this.baseUrl}/sido`, {

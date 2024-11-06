@@ -70,4 +70,103 @@ export class UserService {
   async delete(id: number) {
     return this.prisma.user.delete({ where: { id } });
   }
+
+  async getMyPosts(userId: number, page = 1, limit = 20) {
+    const skip = (page - 1) * limit;
+
+    const [posts, total] = await Promise.all([
+      this.prisma.post.findMany({
+        where: {
+          userId,
+          isDeleted: false,
+        },
+        skip,
+        take: limit,
+        orderBy: {
+          createdAt: 'desc',
+        },
+        include: {
+          category: true,
+          postMeta: true,
+        },
+      }),
+      this.prisma.post.count({
+        where: {
+          userId,
+          isDeleted: false,
+        },
+      }),
+    ]);
+
+    return {
+      posts,
+      total,
+      currentPage: page,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  async getMyPets(userId: number) {
+    return this.prisma.pet.findMany({
+      where: { userId },
+      orderBy: {
+        id: 'asc',
+      },
+    });
+  }
+
+  async getUserActivity(userId: number) {
+    const [posts, comments, likes] = await Promise.all([
+      this.prisma.post.count({
+        where: { userId, isDeleted: false },
+      }),
+      this.prisma.comment.count({
+        where: { userId },
+      }),
+      this.prisma.postLike.count({
+        where: { userId, isActive: true },
+      }),
+    ]);
+
+    return { posts, comments, likes };
+  }
+
+  async getMyBookmarks(userId: number, page = 1, limit = 20) {
+    const skip = (page - 1) * limit;
+
+    const [bookmarks, total] = await Promise.all([
+      this.prisma.postKeep.findMany({
+        where: {
+          userId,
+          isActive: true,
+        },
+        skip,
+        take: limit,
+        orderBy: {
+          createdAt: 'desc',
+        },
+        include: {
+          post: {
+            include: {
+              category: true,
+              postMeta: true,
+            },
+          },
+        },
+      }),
+      this.prisma.postKeep.count({
+        where: {
+          userId,
+          isActive: true,
+        },
+      }),
+    ]);
+
+    return {
+      bookmarks,
+      total,
+      currentPage: page,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
 }

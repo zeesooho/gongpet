@@ -22,7 +22,7 @@ export class PostService {
           categoryId,
           labelId,
           createdAt: new Date(),
-          updatedAt: new Date(), 
+          updatedAt: new Date(),
           postMeta: {
             create: {
               views: 0,
@@ -52,7 +52,7 @@ export class PostService {
     });
   }
 
-  async update(userId: number, postId: number,  dto: CreatePostDto) {
+  async update(userId: number, postId: number, dto: CreatePostDto) {
     const { title, content, categoryId, labelId } = dto;
 
     // 게시글 존재 여부와 작성자 확인
@@ -123,7 +123,7 @@ export class PostService {
   async getPosts(dto: GetPostsRequestDto) {
     const { page = 1, limit = 20, categoryId = null } = dto;
     const skip = (page - 1) * limit;
-    
+
     const [posts, total] = await Promise.all([
       this.prisma.post.findMany({
         where: {
@@ -131,9 +131,9 @@ export class PostService {
           ...(categoryId && { categoryId }),
         },
         skip,
-        take: limit,  
+        take: limit,
         orderBy: {
-          createdAt: "desc"
+          createdAt: 'desc',
         },
         select: {
           id: true,
@@ -146,32 +146,32 @@ export class PostService {
               userProfile: {
                 select: {
                   nickname: true,
-                  imageUrl: true
-                }
-              }
-            }
+                  imageUrl: true,
+                },
+              },
+            },
           },
           postMeta: {
             select: {
               views: true,
               likes: true,
-              commentsCount: true
-            }
+              commentsCount: true,
+            },
           },
-        }
+        },
       }),
       this.prisma.post.count({
         where: {
-          isDeleted: false
-        }
-      })
+          isDeleted: false,
+        },
+      }),
     ]);
-  
+
     return {
       posts,
       total,
       currentPage: page,
-      totalPages: Math.ceil(total / limit)
+      totalPages: Math.ceil(total / limit),
     };
   }
 
@@ -236,7 +236,7 @@ export class PostService {
         description: true,
         hasLabel: true,
         labels: true,
-      }
+      },
     });
     return categories;
   }
@@ -313,6 +313,8 @@ export class PostService {
   }
 
   _generatePreview(content: string): string {
-    return content.trim().slice(0, PostService.previewLength) + (content.trim().length > PostService.previewLength) ? '...' : '';
+    return content.trim().slice(0, PostService.previewLength) + (content.trim().length > PostService.previewLength)
+      ? '...'
+      : '';
   }
 }
